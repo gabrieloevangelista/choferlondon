@@ -397,14 +397,14 @@ export default function CheckoutPage({ params }: PageProps) {
     <div className="w-full overflow-x-hidden">
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">{tour.name}</h1>
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-4">{tour.name}</h1>
             <CheckoutSteps step={currentStep} />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <Card className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            <div className="lg:col-span-2 order-2 lg:order-1">
+              <Card className="p-4 sm:p-6">
                 {/* ETAPA 1: Dados do Cliente */}
                 {currentStep === 1 && (
                   <div className="space-y-6">
@@ -456,7 +456,7 @@ export default function CheckoutPage({ params }: PageProps) {
                     </div>
 
                     <div className="flex justify-end pt-6">
-                      <Button onClick={handleNextStep} size="lg">
+                      <Button onClick={handleNextStep} size="lg" className="w-full sm:w-auto">
                         Continuar para dados da viagem
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -564,12 +564,12 @@ export default function CheckoutPage({ params }: PageProps) {
                       </div>
                     </div>
 
-                    <div className="flex justify-between pt-6">
-                      <Button variant="outline" onClick={handlePrevStep}>
+                    <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6">
+                      <Button variant="outline" onClick={handlePrevStep} className="w-full sm:w-auto order-2 sm:order-1">
                         <ChevronLeft className="mr-2 h-4 w-4" />
                         Voltar
                       </Button>
-                      <Button onClick={handleNextStep} size="lg">
+                      <Button onClick={handleNextStep} size="lg" className="w-full sm:w-auto order-1 sm:order-2">
                         Continuar para confirmação
                         <ChevronRight className="ml-2 h-4 w-4" />
                       </Button>
@@ -734,8 +734,8 @@ export default function CheckoutPage({ params }: PageProps) {
                           </div>
                         </div>
 
-                        <div className="flex justify-between pt-6">
-                          <Button variant="outline" onClick={handlePrevStep} disabled={isProcessing}>
+                        <div className="flex flex-col sm:flex-row justify-between gap-4 pt-6">
+                          <Button variant="outline" onClick={handlePrevStep} disabled={isProcessing} className="w-full sm:w-auto order-2 sm:order-1">
                             <ChevronLeft className="mr-2 h-4 w-4" />
                             Voltar
                           </Button>
@@ -743,7 +743,7 @@ export default function CheckoutPage({ params }: PageProps) {
                             onClick={handleProceedToPayment} 
                             size="lg" 
                             disabled={isProcessing}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto order-1 sm:order-2"
                           >
                             {isProcessing ? (
                               <>
@@ -780,8 +780,8 @@ export default function CheckoutPage({ params }: PageProps) {
             </div>
 
             {/* Sidebar com resumo */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-4">
+            <div className="lg:col-span-1 order-1 lg:order-2">
+              <Card className="lg:sticky lg:top-4">
                 <CardHeader>
                   <CardTitle className="text-lg">Resumo da reserva</CardTitle>
                 </CardHeader>

@@ -9,15 +9,16 @@ interface CheckoutStepsProps {
 
 export function CheckoutSteps({ step }: CheckoutStepsProps) {
   const steps = [
-    { id: 1, name: "Dados do Cliente", description: "Informações pessoais" },
-    { id: 2, name: "Dados da Viagem", description: "Data, passageiros e bagagem" },
-    { id: 3, name: "Pagamento", description: "Finalizar compra" },
+    { id: 1, name: "Dados do Cliente", description: "Informações pessoais", shortName: "Cliente" },
+    { id: 2, name: "Dados da Viagem", description: "Data, passageiros e bagagem", shortName: "Viagem" },
+    { id: 3, name: "Pagamento", description: "Finalizar compra", shortName: "Pagamento" },
   ]
 
   return (
     <div className="mb-8">
       <nav aria-label="Progress">
-        <ol className="flex items-center justify-between">
+        {/* Desktop Layout */}
+        <ol className="hidden md:flex items-center justify-between">
           {steps.map((stepItem, stepIdx) => (
             <li key={stepItem.name} className={cn(
               "relative",
@@ -65,6 +66,50 @@ export function CheckoutSteps({ step }: CheckoutStepsProps) {
             </li>
           ))}
         </ol>
+
+        {/* Mobile Layout */}
+        <div className="md:hidden">
+          <div className="flex items-center justify-center mb-4">
+            <div className="flex items-center space-x-2">
+              {steps.map((stepItem, stepIdx) => (
+                <div key={stepItem.name} className="flex items-center">
+                  <div
+                    className={cn(
+                      "h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium",
+                      stepItem.id < step
+                        ? 'bg-primary text-white'
+                        : stepItem.id === step
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-200 text-gray-500'
+                    )}
+                  >
+                    {stepItem.id < step ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      stepItem.id
+                    )}
+                  </div>
+                  {stepIdx !== steps.length - 1 && (
+                    <div
+                      className={cn(
+                        "w-8 h-0.5 mx-2",
+                        stepItem.id < step ? 'bg-primary' : 'bg-gray-200'
+                      )}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold text-primary">
+              {steps[step - 1]?.shortName}
+            </h3>
+            <p className="text-sm text-gray-600">
+              {steps[step - 1]?.description}
+            </p>
+          </div>
+        </div>
       </nav>
     </div>
   )

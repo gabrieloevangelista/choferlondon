@@ -6,6 +6,7 @@ export async function getTours() {
     .from('tours')
     .select('*')
     .order('name');
+    // Filtrar tours ativos (considera null como ativo para compatibilidade)
 
   if (error) {
     console.error('Error fetching tours:', error);
@@ -15,8 +16,11 @@ export async function getTours() {
   // Log para debug
   console.log('Tours data from Supabase:', data);
 
+  // Filtrar tours ativos (considera null como ativo, filtra apenas false)
+  const activeTours = data.filter(tour => tour.is_active !== false);
+
   // Mapear os dados do Supabase para o formato TouristAttraction
-  return data.map((tour): TouristAttraction => ({
+  return activeTours.map((tour): TouristAttraction => ({
     id: tour.id,
     name: tour.name,
     image: tour.image_url || '',
@@ -36,6 +40,7 @@ export async function getTourBySlug(slug: string) {
     .select('*')
     .eq('slug', slug)
     .single();
+    // Temporariamente removido o filtro is_active para debug
 
   if (error) {
     console.error('Error fetching tour:', error);
@@ -43,6 +48,12 @@ export async function getTourBySlug(slug: string) {
   }
   
   console.log('Tour encontrado:', data);
+
+  // Verificar se o tour está ativo (considera null como ativo)
+  if (data.is_active === false) {
+    console.log('Tour inativo, não será exibido');
+    return null;
+  }
 
   // Retornando os dados do tour com o ID original e o slug para a URL
   return {
