@@ -23,6 +23,7 @@ import {
   HomeIcon,
 } from "lucide-react"
 
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true)
   const [attractions, setAttractions] = useState<TouristAttraction[]>([])
@@ -129,15 +130,37 @@ export default function Home() {
   return (
     <div className="w-full overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative h-screen overflow-hidden">
-        <Image
-          src="https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1920&auto=format&fit=crop"
-          alt="London Skyline"
-          fill
-          className="object-cover"
-          priority
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40"></div>
+      <section className="relative h-[85vh] overflow-hidden">
+        <div className="absolute inset-0 w-full h-full overflow-hidden bg-black">
+          <div className="relative w-full h-full">
+            <video 
+              src="/0905.mp4" 
+              className="absolute w-full h-full object-cover" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+              id="hero-video"
+              preload="auto"
+            />
+            <button 
+              onClick={() => {
+                const video = document.getElementById('hero-video') as HTMLVideoElement;
+                if (video) {
+                  video.muted = !video.muted;
+                }
+              }}
+              className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all"
+              aria-label="Toggle audio"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/80 via-blue-950/60 to-slate-800/30 pointer-events-none"></div>
 
         <div className="relative h-full container-custom mx-auto flex flex-col justify-center">
           <div className="max-w-xl">
