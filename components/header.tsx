@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { Home, MapIcon, Plane, Info, Phone, Search, Menu } from "lucide-react"
+import { Home, MapIcon, Plane, Info, Phone, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SearchModal } from "./search-modal"
 import { Logo } from "./logo"
@@ -19,7 +19,6 @@ const navItems = [
 function HeaderContent() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const pathname = usePathname()
 
@@ -39,24 +38,12 @@ function HeaderContent() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  useEffect(() => {
-    setMobileMenuOpen(false)
-  }, [pathname])
-
-  const handleNavigation = useCallback(() => {
-    setMobileMenuOpen(false)
-  }, [])
-
   const handleSearchOpen = useCallback(() => {
     setIsSearchOpen(true)
   }, [])
 
   const handleSearchClose = useCallback(() => {
     setIsSearchOpen(false)
-  }, [])
-
-  const handleMobileMenuToggle = useCallback(() => {
-    setMobileMenuOpen(prev => !prev)
   }, [])
 
   if (!isMounted) {
@@ -126,60 +113,12 @@ function HeaderContent() {
               >
                 <Search className="w-5 h-5" />
               </button>
-
-              <button
-                onClick={handleMobileMenuToggle}
-                className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-900 hover:bg-gray-200 transition-all cursor-pointer"
-                aria-label="Menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu */}
-      <div
-        className={cn(
-          "fixed inset-0 z-[9997] bg-white transition-all duration-300 ease-in-out transform pt-20 px-4 overflow-y-auto",
-          mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
-        <nav className="py-4">
-          <ul className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              return (
-                <li key={item.name}>
-                  <Link
-                    href={item.href}
-                    onClick={handleNavigation}
-                    className={cn(
-                      "flex items-center px-4 py-3 rounded-md text-base font-medium transition-all duration-200 cursor-pointer",
-                      isActive
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                    )}
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.name}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </div>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div 
-          className="fixed inset-0 z-[9996] bg-black/50 backdrop-blur-sm"
-          onClick={handleNavigation}
-        />
-      )}
 
       {/* Search Modal */}
       <SearchModal isOpen={isSearchOpen} onClose={handleSearchClose} />

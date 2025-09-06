@@ -35,12 +35,26 @@ export async function getTours() {
 
 export async function getTourBySlug(slug: string) {
   console.log('Buscando tour com slug:', slug);
-  const { data, error } = await supabase
+  
+  // Primeiro tenta buscar por slug
+  let { data, error } = await supabase
     .from('tours')
     .select('*')
     .eq('slug', slug)
     .single();
-    // Temporariamente removido o filtro is_active para debug
+
+  // Se não encontrou por slug, tenta buscar por ID (fallback)
+  if (error && error.code === 'PGRST116') {
+    console.log('Tour não encontrado por slug, tentando por ID:', slug);
+    const { data: dataById, error: errorById } = await supabase
+      .from('tours')
+      .select('*')
+      .eq('id', slug)
+      .single();
+    
+    data = dataById;
+    error = errorById;
+  }
 
   if (error) {
     console.error('Error fetching tour:', error);
