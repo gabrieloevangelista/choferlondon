@@ -9,10 +9,12 @@ import { CheckCircle2, Calendar, Download, Mail, ArrowLeft, CalendarPlus } from 
 import Link from "next/link"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { addTourToCalendar } from "@/lib/calendar-utils"
 
 export default function Success() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get("session_id")
+  const tourName = searchParams.get("tour")
   const [bookingDetails, setBookingDetails] = useState<{
     metadata: {
       tourName: string
@@ -24,36 +26,75 @@ export default function Success() {
       customerEmail: string
     }
   } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadBookingDetails() {
+      setLoading(true)
+      setError(null)
+      
       if (sessionId && sessionId !== "success") {
         try {
           const response = await fetch(`/api/stripe/get-session?session_id=${sessionId}`)
+          if (!response.ok) {
+            throw new Error(`Erro ${response.status}: ${response.statusText}`)
+          }
           const data = await response.json()
+          if (data.error) {
+            throw new Error(data.error)
+          }
           setBookingDetails(data)
         } catch (error) {
           console.error("Erro ao carregar detalhes da reserva:", error)
+          setError(error instanceof Error ? error.message : "Erro desconhecido")
+          // Fallback com dados básicos se disponível
+          if (tourName) {
+            setBookingDetails({
+              metadata: {
+                tourName: decodeURIComponent(tourName),
+                tourDate: new Date().toISOString(),
+                passengers: "1",
+                hotel: "A ser confirmado",
+                customerName: "Cliente",
+                customerEmail: "cliente@exemplo.com"
+              }
+            })
+          }
         }
+      } else if (tourName) {
+        // Caso não tenha session_id mas tenha o nome do tour
+        setBookingDetails({
+          metadata: {
+            tourName: decodeURIComponent(tourName),
+            tourDate: new Date().toISOString(),
+            passengers: "1",
+            hotel: "A ser confirmado",
+            customerName: "Cliente",
+            customerEmail: "cliente@exemplo.com"
+          }
+        })
+      } else {
+        setError("Nenhuma informação de reserva encontrada")
       }
+      
+      setLoading(false)
     }
     loadBookingDetails()
-  }, [sessionId])
+  }, [sessionId, tourName])
 
   const addToCalendar = () => {
     if (!bookingDetails) return
 
-    const { tourName, tourDate, hotel } = bookingDetails.metadata
-    const startDate = new Date(tourDate)
-    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // 4 horas depois
-
-    const formatDate = (date: Date) => {
-      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-    }
-
-    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(`Tour em Londres\nLocal de encontro: ${hotel}\nReserva confirmada via Chofer em Londres`)}&location=${encodeURIComponent(hotel)}`
-
-    window.open(calendarUrl, '_blank')
+    const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
+    
+    addTourToCalendar({
+      tourName,
+      tourDate,
+      hotel,
+      passengers,
+      flight
+    })
   }
 
   const downloadReceipt = () => {
@@ -84,8 +125,33 @@ export default function Success() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {bookingDetails ? (
+                {loading ? (
+                  <div className="animate-pulse space-y-4">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  </div>
+                ) : error && !bookingDetails ? (
+                  <div className="text-center py-8">
+                    <div className="text-red-600 mb-4">
+                      <p className="font-medium">Erro ao carregar detalhes</p>
+                      <p className="text-sm">{error}</p>
+                    </div>
+                    <p className="text-gray-600 text-sm">
+                      Não se preocupe, sua reserva foi processada com sucesso.
+                      Você receberá a confirmação por email em breve.
+                    </p>
+                  </div>
+                ) : bookingDetails ? (
                   <>
+                    {error && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                        <p className="text-yellow-800 text-sm">
+                          <strong>Aviso:</strong> Alguns detalhes podem estar incompletos devido a um erro técnico.
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-sm text-gray-600">Tour:</p>
                       <p className="font-semibold">{bookingDetails.metadata.tourName}</p>
@@ -104,7 +170,7 @@ export default function Success() {
                       <p className="text-sm text-gray-600">Local de encontro:</p>
                       <p className="font-semibold">{bookingDetails.metadata.hotel}</p>
                     </div>
-                    {bookingDetails.metadata.flight && (
+                    {bookingDetails.metadata.flight && bookingDetails.metadata.flight !== "" && (
                       <div>
                         <p className="text-sm text-gray-600">Voo:</p>
                         <p className="font-semibold">{bookingDetails.metadata.flight}</p>
@@ -112,10 +178,10 @@ export default function Success() {
                     )}
                   </>
                 ) : (
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">
+                      Nenhuma informação de reserva encontrada.
+                    </p>
                   </div>
                 )}
               </CardContent>

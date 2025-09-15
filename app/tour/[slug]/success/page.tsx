@@ -3,11 +3,16 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { LayoutWrapper } from "@/components/layout-wrapper"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { MobileTabbar } from "@/components/mobile-tabbar"
+import { FloatingContactButton } from "@/components/floating-contact-button"
+import { ClientOnly } from "@/components/client-only"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Calendar, Download, Mail, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { addTourToCalendar } from "@/lib/calendar-utils"
 
 export default function Success() {
   const searchParams = useSearchParams()
@@ -53,25 +58,15 @@ export default function Success() {
 
   const handleAddToCalendar = () => {
     if (bookingDetails) {
-      const tourDate = new Date(bookingDetails.metadata.tourDate)
-      const endDate = new Date(tourDate.getTime() + (4 * 60 * 60 * 1000)) // 4 horas de duração
-
-      const event = {
-        text: bookingDetails.metadata.tourName,
-        details: `Tour em Londres
-Passageiros: ${bookingDetails.metadata.passengers}
-Hotel: ${bookingDetails.metadata.hotel}
-${bookingDetails.metadata.flight ? `Voo: ${bookingDetails.metadata.flight}` : ""}
-
-Reserva confirmada! Em caso de dúvidas, entre em contato conosco.`,
-        location: "Londres, Reino Unido",
-        startTime: tourDate.toISOString(),
-        endTime: endDate.toISOString(),
-      }
-
-      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.text)}&details=${encodeURIComponent(event.details)}&location=${encodeURIComponent(event.location)}&dates=${event.startTime.replace(/[-:]/g, "").replace(/\.\d{3}/, "")}/${event.endTime.replace(/[-:]/g, "").replace(/\.\d{3}/, "")}`
-
-      window.open(googleCalendarUrl, "_blank")
+      const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
+      
+      addTourToCalendar({
+        tourName,
+        tourDate,
+        hotel,
+        passengers,
+        flight
+      })
     }
   }
 
@@ -107,9 +102,11 @@ Obrigado por escolher nossos serviços!
   }
 
   return (
-    <LayoutWrapper>
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-2xl mx-auto">
+    <div className="flex flex-col min-h-screen bg-white overflow-x-hidden">
+      <Header />
+      <main className="flex-grow w-full pt-20 pb-24 md:pb-0 overflow-x-hidden">
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto">
           <Card className="p-8">
             <CardHeader className="text-center pb-6">
               <div className="mx-auto mb-4">
@@ -175,7 +172,7 @@ Obrigado por escolher nossos serviços!
                   variant="default"
                 >
                   <Calendar className="w-5 h-5" />
-                  Adicionar ao Google Calendar
+                  Adicionar ao Calendário
                 </Button>
 
                 <Button 
@@ -208,8 +205,14 @@ Obrigado por escolher nossos serviços!
               </div>
             </CardContent>
           </Card>
+          </div>
         </div>
-      </div>
-    </LayoutWrapper>
+      </main>
+      <Footer />
+      <ClientOnly>
+        <MobileTabbar />
+        <FloatingContactButton />
+      </ClientOnly>
+    </div>
   )
 }
