@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Home, MapIcon, Plane, Info, Phone, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SearchModal } from "./search-modal"
+import { SearchAutocomplete } from "./search-autocomplete"
 import { Logo } from "./logo"
 
 const navItems = [
@@ -94,11 +95,21 @@ function HeaderContent() {
             </nav>
 
             {/* Desktop Actions */}
-            <div className="hidden md:flex items-center space-x-2">
+            <div className="hidden md:flex items-center space-x-4">
+              {/* Autocomplete Search */}
+              <div className="w-80">
+                <SearchAutocomplete 
+                  placeholder="Buscar tours..."
+                  className=""
+                />
+              </div>
+              
+              {/* Fallback Search Button */}
               <button
                 onClick={handleSearchOpen}
                 className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-900 hover:bg-gray-200 hover:scale-105 transition-all cursor-pointer"
-                aria-label="Search"
+                aria-label="Search Modal"
+                title="Busca Avançada"
               >
                 <Search className="w-5 h-5" />
               </button>

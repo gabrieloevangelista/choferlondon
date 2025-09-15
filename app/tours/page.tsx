@@ -6,6 +6,7 @@ import { TourCardSkeleton } from "../../components/tour-card-skeleton"
 import type { Category, TouristAttraction } from "../../types/tourist-attraction"
 import { Search, Filter } from "lucide-react"
 import { getTours } from "../../services/tour-service"
+import { SearchAutocomplete } from "../../components/search-autocomplete"
 
 export default function Tours() {
   const [isLoading, setIsLoading] = useState(true)
@@ -42,15 +43,32 @@ export default function Tours() {
         <h1 className="text-3xl font-bold mb-10 text-primary">Tours em Londres</h1>
 
         {/* Search */}
-        <div className="bg-primary p-6 rounded-xl shadow-md mb-10 border border-blue-600 text-white">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Pesquisar pontos turísticos..."
-              className="w-full py-3 pl-12 pr-4 rounded-lg border border-blue-600 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white text-gray-900 placeholder-gray-500"
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary w-5 h-5" />
+        <div className="bg-primary p-6 rounded-xl shadow-md mb-10 border border-blue-600">
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-white mb-2">Encontre seu tour ideal</h2>
+            <p className="text-blue-100 text-sm">Digite o nome do tour ou atração que deseja visitar</p>
+          </div>
+          <SearchAutocomplete 
+            placeholder="Pesquisar tours e atrações..."
+            className=""
+            onSelect={(tour) => {
+              // Filtrar para mostrar apenas o tour selecionado
+              setSearchQuery(tour.name)
+            }}
+          />
+          
+          {/* Busca tradicional como fallback */}
+          <div className="mt-4">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Ou use a busca tradicional..."
+                value={searchQuery}
+                className="w-full py-3 pl-12 pr-4 rounded-lg border border-blue-600 shadow-sm focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all bg-white text-gray-900 placeholder-gray-500"
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-primary w-5 h-5" />
+            </div>
           </div>
         </div>
 
