@@ -247,30 +247,6 @@ export default function Success() {
             </Button>
           </div>
 
-          {/* Contact Info */}
-          <Card className="mt-8">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <h3 className="font-semibold mb-2">Precisa de ajuda?</h3>
-                <p className="text-gray-600 mb-4">
-                  Entre em contato conosco pelo WhatsApp ou email
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button variant="outline" asChild>
-                    <a href="https://wa.me/442012345678" target="_blank" rel="noopener noreferrer">
-                      WhatsApp: +44 20 1234 5678
-                    </a>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <a href="mailto:info@choferemlondres.com">
-                      info@choferemlondres.com
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Back to Home */}
           <div className="mt-8 text-center">
             <Button variant="ghost" asChild>
