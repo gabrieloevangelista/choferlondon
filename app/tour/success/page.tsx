@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { LayoutWrapper } from "@/components/layout-wrapper"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { MobileTabbar } from "@/components/mobile-tabbar"
+import { FloatingContactButton } from "@/components/floating-contact-button"
+import { ClientOnly } from "@/components/client-only"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2, Calendar, Download, Mail, ArrowLeft, CalendarPlus } from "lucide-react"
@@ -103,9 +107,11 @@ export default function Success() {
   }
 
   return (
-    <LayoutWrapper>
-      <div className="container mx-auto py-12 px-4">
-        <div className="max-w-4xl mx-auto">
+    <div className="flex flex-col min-h-screen bg-white overflow-x-hidden">
+      <Header />
+      <main className="flex-grow w-full pt-20 pb-24 md:pb-0 overflow-x-hidden">
+        <div className="container mx-auto py-12 px-4">
+          <div className="max-w-4xl mx-auto">
           {/* Success Header */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -274,8 +280,14 @@ export default function Success() {
               </Link>
             </Button>
           </div>
+          </div>
         </div>
-      </div>
-    </LayoutWrapper>
+      </main>
+      <Footer />
+      <ClientOnly>
+        <MobileTabbar />
+        <FloatingContactButton />
+      </ClientOnly>
+    </div>
   )
 }
