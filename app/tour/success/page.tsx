@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { MobileTabbar } from "@/components/mobile-tabbar"
 import { FloatingContactButton } from "@/components/floating-contact-button"
 import { ClientOnly } from "@/components/client-only"
@@ -92,18 +91,102 @@ export default function Success() {
 
     const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
     
-    addTourToCalendar({
-      tourName,
-      tourDate,
-      hotel,
-      passengers,
-      flight
-    })
+    // Detectar se é desktop
+    const isDesktop = window.innerWidth >= 768
+    
+    if (isDesktop) {
+      // No desktop, abrir Google Calendar diretamente
+      const startDate = new Date(tourDate)
+      const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // 4 horas
+      
+      const formatDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      }
+      
+      const details = `Tour em Londres\n\nDetalhes da reserva:\n- Passageiros: ${passengers}\n- Local de encontro: ${hotel}${flight ? `\n- Voo: ${flight}` : ''}\n\nReserva confirmada via Chofer em Londres\n\nEm caso de dúvidas, entre em contato conosco:\nWhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com`
+      
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+      
+      window.open(googleCalendarUrl, '_blank')
+    } else {
+      // No mobile, usar a função inteligente
+      addTourToCalendar({
+        tourName,
+        tourDate,
+        hotel,
+        passengers,
+        flight
+      })
+    }
   }
 
   const downloadReceipt = () => {
-    // Implementar download do recibo
-    alert('Funcionalidade de download será implementada em breve!')
+    if (!bookingDetails) return
+
+    const { tourName, tourDate, hotel, passengers, flight, customerName, customerEmail } = bookingDetails.metadata
+    const reservationDate = new Date(tourDate)
+    const currentDate = new Date()
+    
+    // Criar conteúdo do comprovante
+    const receiptContent = `
+═══════════════════════════════════════════════════════════════
+                    COMPROVANTE DE RESERVA
+                     CHOFER EM LONDRES
+═══════════════════════════════════════════════════════════════
+
+DADOS DA RESERVA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tour: ${tourName}
+Data: ${reservationDate.toLocaleDateString('pt-BR', { 
+  weekday: 'long', 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric' 
+})}
+Horário: ${reservationDate.toLocaleTimeString('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+Passageiros: ${passengers}
+Local de Encontro: ${hotel}${flight ? `\nVoo: ${flight}` : ''}
+
+DADOS DO CLIENTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Nome: ${customerName}
+Email: ${customerEmail}
+
+INFORMAÇÕES IMPORTANTES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Chegue ao local de encontro 15 minutos antes do horário
+• Tenha este comprovante sempre em mãos
+• Em caso de atraso, entre em contato imediatamente
+• Cancelamento gratuito até 24h antes do tour
+
+CONTATO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WhatsApp: +44 20 1234 5678
+Email: info@choferemlondres.com
+Website: www.choferemlondres.com
+
+═══════════════════════════════════════════════════════════════
+Comprovante emitido em: ${currentDate.toLocaleString('pt-BR')}
+Status: CONFIRMADO ✓
+═══════════════════════════════════════════════════════════════
+
+Obrigado por escolher nossos serviços!
+Tenha um excelente tour em Londres!
+    `
+
+    // Criar e baixar o arquivo
+    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `Comprovante-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -259,7 +342,6 @@ export default function Success() {
           </div>
         </div>
       </main>
-      <Footer />
       <ClientOnly>
         <MobileTabbar />
         <FloatingContactButton />

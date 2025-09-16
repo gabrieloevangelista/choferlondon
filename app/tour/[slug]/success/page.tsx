@@ -57,9 +57,29 @@ export default function Success() {
   }, [sessionId])
 
   const handleAddToCalendar = () => {
-    if (bookingDetails) {
-      const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
+    if (!bookingDetails) return
+
+    const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
+    
+    // Detectar se é desktop
+    const isDesktop = window.innerWidth >= 768
+    
+    if (isDesktop) {
+      // No desktop, abrir Google Calendar diretamente
+      const startDate = new Date(tourDate)
+      const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // 4 horas
       
+      const formatDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+      }
+      
+      const details = `Tour em Londres\n\nDetalhes da reserva:\n- Passageiros: ${passengers}\n- Local de encontro: ${hotel}${flight ? `\n- Voo: ${flight}` : ''}\n\nReserva confirmada via Chofer em Londres\n\nEm caso de dúvidas, entre em contato conosco:\nWhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com`
+      
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+      
+      window.open(googleCalendarUrl, '_blank')
+    } else {
+      // No mobile, usar a função inteligente
       addTourToCalendar({
         tourName,
         tourDate,
@@ -71,33 +91,72 @@ export default function Success() {
   }
 
   const handleDownloadConfirmation = () => {
-    if (bookingDetails) {
-      const tourDate = new Date(bookingDetails.metadata.tourDate)
-      const confirmationText = `
-CONFIRMAÇÃO DE RESERVA
+    if (!bookingDetails) return
 
-Tour: ${bookingDetails.metadata.tourName}
-Data: ${tourDate.toLocaleDateString('pt-BR')}
-Horário: ${tourDate.toLocaleTimeString('pt-BR')}
-Passageiros: ${bookingDetails.metadata.passengers}
-Hotel: ${bookingDetails.metadata.hotel}
-${bookingDetails.metadata.flight ? `Voo: ${bookingDetails.metadata.flight}` : ''}
+    const { tourName, tourDate, hotel, passengers, flight, customerName, customerEmail } = bookingDetails.metadata
+    const reservationDate = new Date(tourDate)
+    const currentDate = new Date()
+    
+    // Criar conteúdo do comprovante
+    const receiptContent = `
+═══════════════════════════════════════════════════════════════
+                    COMPROVANTE DE RESERVA
+                     CHOFER EM LONDRES
+═══════════════════════════════════════════════════════════════
 
-Cliente: ${bookingDetails.metadata.customerName}
-Email: ${bookingDetails.metadata.customerEmail}
+DADOS DA RESERVA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Tour: ${tourName}
+Data: ${reservationDate.toLocaleDateString('pt-BR', { 
+  weekday: 'long', 
+  year: 'numeric', 
+  month: 'long', 
+  day: 'numeric' 
+})}
+Horário: ${reservationDate.toLocaleTimeString('pt-BR', {
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+Passageiros: ${passengers}
+Local de Encontro: ${hotel}${flight ? `\nVoo: ${flight}` : ''}
+
+DADOS DO CLIENTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Nome: ${customerName}
+Email: ${customerEmail}
+
+INFORMAÇÕES IMPORTANTES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Chegue ao local de encontro 15 minutos antes do horário
+• Tenha este comprovante sempre em mãos
+• Em caso de atraso, entre em contato imediatamente
+• Cancelamento gratuito até 24h antes do tour
+
+CONTATO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WhatsApp: +44 20 1234 5678
+Email: info@choferemlondres.com
+Website: www.choferemlondres.com
+
+═══════════════════════════════════════════════════════════════
+Comprovante emitido em: ${currentDate.toLocaleString('pt-BR')}
+Status: CONFIRMADO ✓
+═══════════════════════════════════════════════════════════════
 
 Obrigado por escolher nossos serviços!
-      `
+Tenha um excelente tour em Londres!
+    `
 
-      const blob = new Blob([confirmationText], { type: 'text/plain' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `confirmacao-reserva-${tourDate.toISOString().split('T')[0]}.txt`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      window.URL.revokeObjectURL(url)
+      // Criar e baixar o arquivo
+      const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Comprovante-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.txt`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
     }
   }
 
@@ -208,7 +267,7 @@ Obrigado por escolher nossos serviços!
           </div>
         </div>
       </main>
-      <Footer />
+      
       <ClientOnly>
         <MobileTabbar />
         <FloatingContactButton />
