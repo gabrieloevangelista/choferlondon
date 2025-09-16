@@ -29,15 +29,17 @@ export default function Transfer() {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [clientSecret, setClientSecret] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [transferPrice] = useState(45) // Preço fixo do transfer em libras
-
   const airports = [
-    { value: "heathrow", label: "Heathrow (LHR)" },
-    { value: "gatwick", label: "Gatwick (LGW)" },
-    { value: "stansted", label: "Stansted (STN)" },
-    { value: "luton", label: "Luton (LTN)" },
-    { value: "city", label: "London City (LCY)" },
+    { value: "heathrow", label: "Heathrow (LHR)", price: 180 },
+    { value: "gatwick", label: "Gatwick (LGW)", price: 160 },
+    { value: "stansted", label: "Stansted (STN)", price: 180 },
+    { value: "luton", label: "Luton (LTN)", price: 150 },
+    { value: "city", label: "London City (LCY)", price: 150 },
   ]
+
+  // Calcular preço baseado no aeroporto selecionado
+  const selectedAirportData = airports.find(a => a.value === airport)
+  const transferPrice = selectedAirportData?.price || 150 // Preço padrão se nenhum aeroporto selecionado
 
   // Função para processar pagamento via Stripe
   const handleStripePayment = async (e: FormEvent) => {
@@ -287,9 +289,31 @@ export default function Transfer() {
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold text-gray-900">Preço do Transfer:</span>
-                    <span className="text-2xl font-bold text-blue-600">£{transferPrice}</span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {airport ? `£${transferPrice}` : 'Selecione um aeroporto'}
+                    </span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-1">Preço fixo para qualquer aeroporto de Londres</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {airport 
+                      ? `Preço para ${selectedAirportData?.label}` 
+                      : 'O preço varia conforme o aeroporto selecionado'
+                    }
+                  </p>
+                  
+                  {/* Tabela de Preços */}
+                  {!airport && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Tabela de Preços:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-xs">
+                        {airports.map((airportData) => (
+                          <div key={airportData.value} className="flex justify-between">
+                            <span className="text-gray-600">{airportData.label}:</span>
+                            <span className="font-semibold text-blue-600">£{airportData.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Seleção do Método de Pagamento */}
@@ -410,18 +434,21 @@ export default function Transfer() {
               </div>
 
               <ul className="space-y-3">
-                {airports.map((airport) => (
-                  <li key={airport.value} className="flex items-center text-gray-600 border-b border-gray-100 pb-2">
-                    <MapPin className="w-4 h-4 mr-2 text-blue-500" />
-                    {airport.label}
+                {airports.map((airportData) => (
+                  <li key={airportData.value} className="flex items-center justify-between text-gray-600 border-b border-gray-100 pb-2">
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 mr-2 text-blue-500" />
+                      <span>{airportData.label}</span>
+                    </div>
+                    <span className="font-semibold text-blue-600">£{airportData.price}</span>
                   </li>
                 ))}
               </ul>
 
               <div className="mt-4 p-4 bg-blue-50 rounded-md border border-blue-100">
                 <p className="text-gray-600 text-sm">
-                  Oferecemos serviços de transfer de e para todos estes aeroportos. Nossos motoristas são experientes e
-                  conhecem bem as rotas, garantindo uma viagem confortável e pontual até seu hotel.
+                  Oferecemos serviços de transfer de e para todos estes aeroportos com preços fixos por destino. 
+                  Nossos motoristas são experientes e conhecem bem as rotas, garantindo uma viagem confortável e pontual até seu hotel.
                 </p>
               </div>
             </div>
