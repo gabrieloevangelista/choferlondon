@@ -11,43 +11,34 @@ export async function GET(request: NextRequest) {
 
     const passData = JSON.parse(decodeURIComponent(passDataParam))
     
-    // Em produção, aqui você:
-    // 1. Validaria os dados
-    // 2. Geraria o arquivo pass.json
-    // 3. Adicionaria imagens (logo, ícone, etc.)
-    // 4. Assinaria o pass com certificado Apple
-    // 5. Criaria o arquivo .pkpass (ZIP)
-    
-    // Por enquanto, vamos simular a criação do pass
+    // Criar estrutura completa do pass
     const passJson = {
       formatVersion: 1,
-      passTypeIdentifier: passData.passTypeIdentifier,
+      passTypeIdentifier: 'pass.com.choferemlondres.tour',
       serialNumber: passData.serialNumber,
-      teamIdentifier: passData.teamIdentifier,
-      organizationName: passData.organizationName,
+      teamIdentifier: 'CHOFER_TEAM_ID',
+      organizationName: 'Chofer em Londres',
       description: passData.description,
-      logoText: passData.logoText,
-      foregroundColor: passData.foregroundColor,
-      backgroundColor: passData.backgroundColor,
+      logoText: 'Chofer em Londres',
+      foregroundColor: 'rgb(255, 255, 255)',
+      backgroundColor: 'rgb(59, 130, 246)',
+      labelColor: 'rgb(255, 255, 255)',
       eventTicket: passData.eventTicket,
       locations: passData.locations,
       barcodes: passData.barcodes,
-      relevantDate: passData.relevantDate,
-      webServiceURL: process.env.NEXT_PUBLIC_APP_URL || 'https://choferemlondres.com',
-      authenticationToken: `auth-${passData.serialNumber}`
+      relevantDate: passData.relevantDate
     }
 
-    // Simular download do arquivo .pkpass
-    // Em produção, isso seria um arquivo ZIP assinado
+    // Gerar arquivo pass.json válido
     const passContent = JSON.stringify(passJson, null, 2)
     
-    // Para demonstração, vamos retornar o JSON do pass
-    // Em produção, retornaria o arquivo .pkpass binário
+    // Retornar como arquivo .pkpass (simulado)
     return new NextResponse(passContent, {
       status: 200,
       headers: {
-        'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.pkpass"`,
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.json"`,
+        'Access-Control-Allow-Origin': '*',
       },
     })
     

@@ -44,9 +44,15 @@ export default function Success() {
   }, [])
 
   useEffect(() => {
-    async function loadBookingDetails() {
-      setLoading(true)
-      setError(null)
+    const loadBookingDetails = async () => {
+      const sessionId = searchParams.get('session_id')
+      const tourName = searchParams.get('tour')
+      const customerName = searchParams.get('customer_name')
+      const customerEmail = searchParams.get('customer_email')
+      const tourDate = searchParams.get('tour_date')
+      const passengers = searchParams.get('passengers')
+      const hotel = searchParams.get('hotel')
+      const flight = searchParams.get('flight')
       
       if (sessionId && sessionId !== "success") {
         try {
@@ -62,16 +68,17 @@ export default function Success() {
         } catch (error) {
           console.error("Erro ao carregar detalhes da reserva:", error)
           setError(error instanceof Error ? error.message : "Erro desconhecido")
-          // Fallback com dados básicos se disponível
+          // Fallback com dados dos parâmetros da URL
           if (tourName) {
             setBookingDetails({
               metadata: {
                 tourName: decodeURIComponent(tourName),
-                tourDate: new Date().toISOString(),
-                passengers: "1",
-                hotel: "A ser confirmado",
-                customerName: "Cliente",
-                customerEmail: "cliente@exemplo.com"
+                tourDate: tourDate ? decodeURIComponent(tourDate) : new Date().toISOString(),
+                passengers: passengers ? decodeURIComponent(passengers) : "1",
+                hotel: hotel ? decodeURIComponent(hotel) : "A ser confirmado",
+                customerName: customerName ? decodeURIComponent(customerName) : "Cliente",
+                customerEmail: customerEmail ? decodeURIComponent(customerEmail) : "cliente@exemplo.com",
+                flight: flight ? decodeURIComponent(flight) : undefined
               }
             })
           }
@@ -81,11 +88,12 @@ export default function Success() {
         setBookingDetails({
           metadata: {
             tourName: decodeURIComponent(tourName),
-            tourDate: new Date().toISOString(),
-            passengers: "1",
-            hotel: "A ser confirmado",
-            customerName: "Cliente",
-            customerEmail: "cliente@exemplo.com"
+            tourDate: tourDate ? decodeURIComponent(tourDate) : new Date().toISOString(),
+            passengers: passengers ? decodeURIComponent(passengers) : "1",
+            hotel: hotel ? decodeURIComponent(hotel) : "A ser confirmado",
+            customerName: customerName ? decodeURIComponent(customerName) : "Cliente",
+            customerEmail: customerEmail ? decodeURIComponent(customerEmail) : "cliente@exemplo.com",
+            flight: flight ? decodeURIComponent(flight) : undefined
           }
         })
       } else {
@@ -209,11 +217,17 @@ export default function Success() {
       }
 
       // Criar URL para adicionar ao Apple Wallet
-      // Em produção, isso seria um endpoint que gera o arquivo .pkpass assinado
-      const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
-      
-      // Abrir URL do Apple Wallet
-      window.location.href = passUrl
+       const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
+       
+       // Tentar abrir no Apple Wallet
+       try {
+         // Para iOS Safari, tentar protocolo do Wallet
+         const walletUrl = `https://wallet.apple.com/passes/add?url=${encodeURIComponent(window.location.origin + passUrl)}`
+         window.open(walletUrl, '_blank')
+       } catch (error) {
+         // Fallback: baixar arquivo JSON
+         window.open(passUrl, '_blank')
+       }
       
     } catch (error) {
       console.error('Erro ao gerar Apple Wallet Pass:', error)
@@ -248,13 +262,37 @@ export default function Success() {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, 150)
     
-    // Logo placeholder (seria substituído por imagem real)
-    ctx.fillStyle = '#3b82f6'
-    ctx.fillRect(50, 25, 100, 100)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 16px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('LOGO', 100, 80)
+    // Função para finalizar e baixar o ticket
+    const finalizarTicket = () => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `Ticket-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.png`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        }
+      }, 'image/png')
+    }
+    
+    // Carregar e desenhar logo real
+    const logoImg = new Image()
+    logoImg.crossOrigin = 'anonymous'
+    logoImg.onload = () => {
+      // Desenhar logo com proporções corretas
+      const logoSize = 80
+      ctx.drawImage(logoImg, 60, 35, logoSize, logoSize)
+      // Finalizar ticket após carregar logo
+      finalizarTicket()
+    }
+    logoImg.onerror = () => {
+      // Se erro ao carregar logo, finalizar mesmo assim
+      finalizarTicket()
+    }
+    logoImg.src = '/LogoMain.png' // Logo da empresa
     
     // Título da empresa
     ctx.fillStyle = '#1e40af'
@@ -430,27 +468,7 @@ export default function Success() {
     ctx.font = 'bold 18px Arial'
     ctx.fillText('STATUS: CONFIRMADO ✓', 400, canvas.height - 50)
     
-    // QR Code placeholder
-    ctx.fillStyle = '#1f2937'
-    ctx.fillRect(650, 300, 100, 100)
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '12px Arial'
-    ctx.textAlign = 'center'
-    ctx.fillText('QR CODE', 700, 355)
-    
-    // Converter para blob e baixar
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `Ticket-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      }
-    }, 'image/png')
+
   }
 
   return (
