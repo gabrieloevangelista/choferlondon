@@ -186,39 +186,66 @@ export async function GET(request: NextRequest) {
       sharingProhibited: false
     }
 
-    // Criar arquivo .pkpass conforme Apple Passes Documentation
-    const zip = new JSZip()
+    // IMPORTANTE: Apple Wallet requer certificado Apple Developer para passes reais
+    // Esta implementação é para desenvolvimento/demonstração
     
-    // 1. Adicionar pass.json
-    const passContent = JSON.stringify(passJson, null, 2)
-    zip.file('pass.json', passContent)
-    
-    // 2. Gerar manifest.json
-    const files = {
-      'pass.json': passContent
+    // Simplificar estrutura do pass para evitar erros de validação
+    const simplifiedPassJson = {
+      formatVersion: 1,
+      passTypeIdentifier: 'pass.com.choferemlondres.eventticket',
+      serialNumber: passData.serialNumber,
+      teamIdentifier: 'CHOFER_TEAM_ID',
+      organizationName: 'Chofer em Londres',
+      description: `Tour: ${passData.tourName}`,
+      
+      // Cores em formato RGB válido
+      foregroundColor: 'rgb(255, 255, 255)',
+      backgroundColor: 'rgb(59, 130, 246)',
+      
+      // Estrutura mínima do eventTicket
+      eventTicket: {
+        primaryFields: [{
+          key: 'event',
+          label: 'TOUR',
+          value: passData.tourName
+        }],
+        secondaryFields: [{
+          key: 'date',
+          label: 'DATA',
+          value: new Date(passData.tourDate).toLocaleDateString('pt-BR')
+        }],
+        backFields: [{
+          key: 'customer',
+          label: 'Cliente',
+          value: passData.customerName
+        }]
+      },
+      
+      // Barcode simples
+      barcodes: [{
+        message: passData.serialNumber,
+        format: 'PKBarcodeFormatQR',
+        messageEncoding: 'iso-8859-1'
+      }]
     }
-    const manifest = generateManifest(files)
-    zip.file('manifest.json', manifest)
+
+    // Para desenvolvimento, retornar JSON que pode ser testado
+    // Em produção, seria necessário:
+    // 1. Certificado Apple Developer
+    // 2. Assinatura PKCS#7 real
+    // 3. Arquivo ZIP com manifest correto
     
-    // 3. Gerar assinatura (simulada para desenvolvimento)
-    const signature = generateSignature(manifest)
-    zip.file('signature', signature)
+    const passContent = JSON.stringify(simplifiedPassJson, null, 2)
     
-    // 4. Gerar arquivo .pkpass
-    const pkpassBuffer = await zip.generateAsync({ type: 'nodebuffer' })
-    
-    // Retornar como .pkpass válido
-    return new NextResponse(pkpassBuffer, {
+    // Retornar como JSON para teste (não .pkpass real)
+    return new NextResponse(passContent, {
       status: 200,
       headers: {
-        'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `attachment; filename="chofer-tour-${passData.serialNumber}.pkpass"`,
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="chofer-tour-${passData.serialNumber}.json"`,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
       },
     })
     

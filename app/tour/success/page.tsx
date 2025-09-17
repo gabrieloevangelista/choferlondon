@@ -223,35 +223,29 @@ export default function Success() {
       // Detectar se é dispositivo iOS
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
       
-      if (isIOS) {
-        // iOS - Tentar gerar Apple Wallet Pass real
-        try {
-          const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
-          
-          // Criar link temporário para download
-          const link = document.createElement('a')
-          link.href = passUrl
-          link.download = `chofer-tour-${passData.serialNumber}.pkpass`
-          link.style.display = 'none'
-          
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-          
-          // Mostrar instruções para iOS
-          setTimeout(() => {
-            alert('Pass baixado! Para adicionar ao Apple Wallet:\n\n1. Abra o arquivo baixado\n2. Toque em "Adicionar" no canto superior direito\n3. O passe será adicionado à sua Wallet')
-          }, 1000)
-          
-        } catch (error) {
-          console.error('Erro ao gerar pass nativo:', error)
-          // Fallback para página web
-          openWebWalletPass(passData)
-        }
-      } else {
-        // Outros dispositivos - Abrir página web simulando Wallet
-        openWebWalletPass(passData)
-      }
+      // SOLUÇÃO: Como Apple Wallet requer certificado Apple Developer ($99/ano),
+       // vamos usar uma abordagem alternativa que funciona para todos os dispositivos
+       
+       if (isIOS) {
+         // iOS - Mostrar instruções para adicionar à tela inicial como PWA
+         const instructions = `Para salvar este ticket no seu iPhone:\n\n` +
+           `1. Toque no botão "Compartilhar" do Safari (ícone de seta)\n` +
+           `2. Role para baixo e toque em "Adicionar à Tela de Início"\n` +
+           `3. Toque em "Adicionar" no canto superior direito\n` +
+           `4. O ticket ficará disponível na sua tela inicial\n\n` +
+           `Detalhes do seu tour:\n` +
+           `${passData.tourName}\n` +
+           `${new Date(passData.tourDate).toLocaleDateString('pt-BR')}\n` +
+           `Cliente: ${passData.customerName}`
+         
+         alert(instructions)
+         
+         // Abrir página web do wallet como alternativa
+         openWebWalletPass(passData)
+       } else {
+         // Outros dispositivos - Abrir página web simulando Wallet
+         openWebWalletPass(passData)
+       }
        
      } catch (error) {
        console.error('Erro ao processar Apple Wallet Pass:', error)
