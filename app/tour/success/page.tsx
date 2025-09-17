@@ -217,17 +217,16 @@ export default function Success() {
       }
 
       // Criar URL para adicionar ao Apple Wallet
-       const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
-       
-       // Tentar abrir no Apple Wallet
-       try {
-         // Para iOS Safari, tentar protocolo do Wallet
-         const walletUrl = `https://wallet.apple.com/passes/add?url=${encodeURIComponent(window.location.origin + passUrl)}`
-         window.open(walletUrl, '_blank')
-       } catch (error) {
-         // Fallback: baixar arquivo JSON
-         window.open(passUrl, '_blank')
-       }
+        const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
+        
+        // Abrir diretamente o arquivo .pkpass
+        // O iOS Safari reconhecerá automaticamente e oferecerá para adicionar ao Wallet
+        const link = document.createElement('a')
+        link.href = passUrl
+        link.download = `tour-${Date.now()}.pkpass`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
       
     } catch (error) {
       console.error('Erro ao gerar Apple Wallet Pass:', error)

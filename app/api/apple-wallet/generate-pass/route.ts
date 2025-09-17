@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     const passData = JSON.parse(decodeURIComponent(passDataParam))
     
-    // Criar estrutura completa do pass
+    // Criar estrutura completa do pass conforme Apple Wallet
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier: 'pass.com.choferemlondres.tour',
@@ -23,22 +23,32 @@ export async function GET(request: NextRequest) {
       foregroundColor: 'rgb(255, 255, 255)',
       backgroundColor: 'rgb(59, 130, 246)',
       labelColor: 'rgb(255, 255, 255)',
-      eventTicket: passData.eventTicket,
-      locations: passData.locations,
-      barcodes: passData.barcodes,
-      relevantDate: passData.relevantDate
+      eventTicket: {
+        primaryFields: passData.eventTicket?.primaryFields || [],
+        secondaryFields: passData.eventTicket?.secondaryFields || [],
+        auxiliaryFields: passData.eventTicket?.auxiliaryFields || [],
+        backFields: passData.eventTicket?.backFields || []
+      },
+      locations: passData.locations || [],
+      barcodes: passData.barcodes || [],
+      relevantDate: passData.relevantDate,
+      // Adicionar campos obrigatórios
+      webServiceURL: `${process.env.NEXT_PUBLIC_APP_URL || 'https://choferemlondres.com'}/api/apple-wallet`,
+      authenticationToken: `auth-${passData.serialNumber}`
     }
 
     // Gerar arquivo pass.json válido
     const passContent = JSON.stringify(passJson, null, 2)
     
-    // Retornar como arquivo .pkpass (simulado)
+    // Retornar como arquivo .pkpass com content-type correto
     return new NextResponse(passContent, {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.json"`,
+        'Content-Type': 'application/vnd.apple.pkpass',
+        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.pkpass"`,
         'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
       },
     })
     
@@ -49,6 +59,17 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  })
 }
 
 export async function POST(request: NextRequest) {
