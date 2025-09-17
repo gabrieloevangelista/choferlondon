@@ -8,7 +8,7 @@ import { FloatingContactButton } from "@/components/floating-contact-button"
 import { ClientOnly } from "@/components/client-only"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle2, Calendar, Download, Mail, ArrowLeft, CalendarPlus } from "lucide-react"
+import { CheckCircle2, Calendar, Download, Mail, ArrowLeft, CalendarPlus, Wallet } from "lucide-react"
 import Link from "next/link"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -31,6 +31,17 @@ export default function Success() {
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isIOS, setIsIOS] = useState(false)
+
+  // Detectar iOS
+  useEffect(() => {
+    const checkIOS = () => {
+      const userAgent = navigator.userAgent
+      const isIOSDevice = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream
+      setIsIOS(isIOSDevice)
+    }
+    checkIOS()
+  }, [])
 
   useEffect(() => {
     async function loadBookingDetails() {
@@ -120,73 +131,326 @@ export default function Success() {
     }
   }
 
-  const downloadReceipt = () => {
+  const addToAppleWallet = async () => {
+    if (!bookingDetails) return
+
+    const { tourName, tourDate, hotel, passengers, flight, customerName, customerEmail } = bookingDetails.metadata
+    const tourDateTime = new Date(tourDate)
+
+    try {
+      // Criar dados do pass para Apple Wallet
+      const passData = {
+        formatVersion: 1,
+        passTypeIdentifier: 'pass.com.choferemlondres.tour',
+        serialNumber: `tour-${Date.now()}`,
+        teamIdentifier: 'CHOFER_TEAM_ID',
+        organizationName: 'Chofer em Londres',
+        description: `Tour: ${tourName}`,
+        logoText: 'Chofer em Londres',
+        foregroundColor: 'rgb(255, 255, 255)',
+        backgroundColor: 'rgb(59, 130, 246)',
+        eventTicket: {
+          primaryFields: [{
+            key: 'event',
+            label: 'TOUR',
+            value: tourName
+          }],
+          secondaryFields: [{
+            key: 'date',
+            label: 'DATA',
+            value: tourDateTime.toLocaleDateString('pt-BR')
+          }, {
+            key: 'time',
+            label: 'HORÁRIO',
+            value: tourDateTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          }],
+          auxiliaryFields: [{
+            key: 'passengers',
+            label: 'PASSAGEIROS',
+            value: passengers
+          }, {
+            key: 'location',
+            label: 'LOCAL',
+            value: hotel
+          }],
+          backFields: [{
+            key: 'customer',
+            label: 'Cliente',
+            value: customerName
+          }, {
+            key: 'email',
+            label: 'Email',
+            value: customerEmail
+          }, {
+            key: 'flight',
+            label: 'Voo',
+            value: flight || 'Não informado'
+          }, {
+            key: 'instructions',
+            label: 'Instruções',
+            value: 'Chegue 15 minutos antes do horário. Em caso de dúvidas, entre em contato: +44 20 1234 5678'
+          }, {
+            key: 'contact',
+            label: 'Contato',
+            value: 'WhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com\nWebsite: www.choferemlondres.com'
+          }]
+        },
+        locations: [{
+          latitude: 51.5074,
+          longitude: -0.1278,
+          relevantText: `Seu tour ${tourName} está próximo!`
+        }],
+        barcodes: [{
+          message: `TOUR-${Date.now()}`,
+          format: 'PKBarcodeFormatQR',
+          messageEncoding: 'iso-8859-1'
+        }],
+        relevantDate: tourDateTime.toISOString()
+      }
+
+      // Criar URL para adicionar ao Apple Wallet
+      // Em produção, isso seria um endpoint que gera o arquivo .pkpass assinado
+      const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
+      
+      // Abrir URL do Apple Wallet
+      window.location.href = passUrl
+      
+    } catch (error) {
+      console.error('Erro ao gerar Apple Wallet Pass:', error)
+      alert('Erro ao gerar passe para Apple Wallet. Tente novamente.')
+    }
+  }
+
+  const downloadReceipt = async () => {
     if (!bookingDetails) return
 
     const { tourName, tourDate, hotel, passengers, flight, customerName, customerEmail } = bookingDetails.metadata
     const reservationDate = new Date(tourDate)
     const currentDate = new Date()
     
-    // Criar conteúdo do comprovante
-    const receiptContent = `
-═══════════════════════════════════════════════════════════════
-                    COMPROVANTE DE RESERVA
-                     CHOFER EM LONDRES
-═══════════════════════════════════════════════════════════════
+    // Criar canvas para gerar imagem do ticket
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-DADOS DA RESERVA:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Tour: ${tourName}
-Data: ${reservationDate.toLocaleDateString('pt-BR', { 
-  weekday: 'long', 
-  year: 'numeric', 
-  month: 'long', 
-  day: 'numeric' 
-})}
-Horário: ${reservationDate.toLocaleTimeString('pt-BR', {
-  hour: '2-digit',
-  minute: '2-digit'
-})}
-Passageiros: ${passengers}
-Local de Encontro: ${hotel}${flight ? `\nVoo: ${flight}` : ''}
-
-DADOS DO CLIENTE:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Nome: ${customerName}
-Email: ${customerEmail}
-
-INFORMAÇÕES IMPORTANTES:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• Chegue ao local de encontro 15 minutos antes do horário
-• Tenha este comprovante sempre em mãos
-• Em caso de atraso, entre em contato imediatamente
-• Cancelamento gratuito até 24h antes do tour
-
-CONTATO:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-WhatsApp: +44 20 1234 5678
-Email: info@choferemlondres.com
-Website: www.choferemlondres.com
-
-═══════════════════════════════════════════════════════════════
-Comprovante emitido em: ${currentDate.toLocaleString('pt-BR')}
-Status: CONFIRMADO ✓
-═══════════════════════════════════════════════════════════════
-
-Obrigado por escolher nossos serviços!
-Tenha um excelente tour em Londres!
-    `
-
-    // Criar e baixar o arquivo
-    const blob = new Blob([receiptContent], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `Comprovante-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.txt`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    // Configurar canvas - formato ticket
+    canvas.width = 800
+    canvas.height = 1200
+    
+    // Background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
+    gradient.addColorStop(0, '#1e40af') // blue-800
+    gradient.addColorStop(1, '#3b82f6') // blue-500
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    
+    // Header com logo area
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, 150)
+    
+    // Logo placeholder (seria substituído por imagem real)
+    ctx.fillStyle = '#3b82f6'
+    ctx.fillRect(50, 25, 100, 100)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = 'bold 16px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('LOGO', 100, 80)
+    
+    // Título da empresa
+    ctx.fillStyle = '#1e40af'
+    ctx.font = 'bold 32px Arial'
+    ctx.textAlign = 'left'
+    ctx.fillText('CHOFER EM LONDRES', 180, 60)
+    ctx.font = '18px Arial'
+    ctx.fillText('Tours Exclusivos em Londres', 180, 90)
+    
+    // Linha decorativa
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    ctx.moveTo(50, 130)
+    ctx.lineTo(750, 130)
+    ctx.stroke()
+    
+    // Seção principal do ticket
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(40, 180, 720, 800)
+    
+    // Sombra do ticket
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+    ctx.shadowBlur = 10
+    ctx.shadowOffsetX = 0
+    ctx.shadowOffsetY = 5
+    
+    // Título do ticket
+    ctx.fillStyle = '#1e40af'
+    ctx.font = 'bold 28px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('COMPROVANTE DE RESERVA', 400, 230)
+    
+    // Reset shadow
+    ctx.shadowColor = 'transparent'
+    
+    // Informações principais
+    ctx.fillStyle = '#1f2937'
+    ctx.font = 'bold 24px Arial'
+    ctx.textAlign = 'left'
+    
+    let y = 290
+    const lineHeight = 40
+    
+    // Tour name destacado
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 26px Arial'
+    ctx.fillText('TOUR:', 80, y)
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '22px Arial'
+    const tourNameWrapped = tourName.length > 35 ? tourName.substring(0, 35) + '...' : tourName
+    ctx.fillText(tourNameWrapped, 80, y + 30)
+    y += 80
+    
+    // Data e hora
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('DATA:', 80, y)
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '18px Arial'
+    ctx.fillText(reservationDate.toLocaleDateString('pt-BR', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }), 80, y + 25)
+    
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('HORÁRIO:', 400, y)
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '18px Arial'
+    ctx.fillText(reservationDate.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    }), 400, y + 25)
+    y += 70
+    
+    // Passageiros e local
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('PASSAGEIROS:', 80, y)
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '18px Arial'
+    ctx.fillText(passengers, 80, y + 25)
+    
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('LOCAL:', 400, y)
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '16px Arial'
+    const hotelWrapped = hotel.length > 25 ? hotel.substring(0, 25) + '...' : hotel
+    ctx.fillText(hotelWrapped, 400, y + 25)
+    y += 70
+    
+    // Voo (se houver)
+    if (flight) {
+      ctx.fillStyle = '#3b82f6'
+      ctx.font = 'bold 20px Arial'
+      ctx.fillText('VOO:', 80, y)
+      ctx.fillStyle = '#1f2937'
+      ctx.font = '18px Arial'
+      ctx.fillText(flight, 80, y + 25)
+      y += 50
+    }
+    
+    // Linha separadora
+    ctx.strokeStyle = '#e5e7eb'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.moveTo(80, y + 20)
+    ctx.lineTo(680, y + 20)
+    ctx.stroke()
+    y += 50
+    
+    // Dados do cliente
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 22px Arial'
+    ctx.fillText('DADOS DO CLIENTE', 80, y)
+    y += 40
+    
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '18px Arial'
+    ctx.fillText(`Nome: ${customerName}`, 80, y)
+    y += 30
+    ctx.fillText(`Email: ${customerEmail}`, 80, y)
+    y += 50
+    
+    // Instruções importantes
+    ctx.fillStyle = '#dc2626'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('INSTRUÇÕES IMPORTANTES', 80, y)
+    y += 35
+    
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '16px Arial'
+    const instructions = [
+      '• Chegue 15 minutos antes do horário',
+      '• Tenha este comprovante sempre em mãos',
+      '• Em caso de atraso, entre em contato',
+      '• Cancelamento gratuito até 24h antes'
+    ]
+    
+    instructions.forEach(instruction => {
+      ctx.fillText(instruction, 80, y)
+      y += 25
+    })
+    
+    y += 30
+    
+    // Contato
+    ctx.fillStyle = '#3b82f6'
+    ctx.font = 'bold 20px Arial'
+    ctx.fillText('CONTATO', 80, y)
+    y += 35
+    
+    ctx.fillStyle = '#1f2937'
+    ctx.font = '16px Arial'
+    ctx.fillText('WhatsApp: +44 20 1234 5678', 80, y)
+    y += 25
+    ctx.fillText('Email: info@choferemlondres.com', 80, y)
+    y += 25
+    ctx.fillText('Website: www.choferemlondres.com', 80, y)
+    
+    // Footer
+    ctx.fillStyle = '#6b7280'
+    ctx.font = '14px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText(`Emitido em: ${currentDate.toLocaleString('pt-BR')}`, 400, canvas.height - 80)
+    
+    // Status confirmado
+    ctx.fillStyle = '#059669'
+    ctx.font = 'bold 18px Arial'
+    ctx.fillText('STATUS: CONFIRMADO ✓', 400, canvas.height - 50)
+    
+    // QR Code placeholder
+    ctx.fillStyle = '#1f2937'
+    ctx.fillRect(650, 300, 100, 100)
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '12px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText('QR CODE', 700, 355)
+    
+    // Converter para blob e baixar
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `Ticket-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }
+    }, 'image/png')
   }
 
   return (
@@ -312,13 +576,29 @@ Tenha um excelente tour em Londres!
                       <p className="text-sm text-gray-600">Tenha sempre em mãos</p>
                     </div>
                   </div>
+
+                  {isIOS && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Wallet className="w-3 h-3 text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Adicione à Apple Wallet</p>
+                        <p className="text-sm text-gray-600">Acesso rápido no seu iPhone</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+          <div className={`mt-8 grid gap-4 max-w-3xl mx-auto ${
+            isIOS 
+              ? 'grid-cols-1 sm:grid-cols-3' 
+              : 'grid-cols-1 sm:grid-cols-2'
+          }`}>
             <Button onClick={addToCalendar} size="lg" className="bg-blue-600 hover:bg-blue-700">
               <CalendarPlus className="w-5 h-5 mr-2" />
               Adicionar ao Calendário
@@ -326,8 +606,15 @@ Tenha um excelente tour em Londres!
             
             <Button onClick={downloadReceipt} variant="outline" size="lg">
               <Download className="w-5 h-5 mr-2" />
-              Baixar Comprovante
+              Baixar Ticket
             </Button>
+
+            {isIOS && (
+              <Button onClick={addToAppleWallet} variant="outline" size="lg" className="bg-gray-50 hover:bg-gray-100 border-gray-300">
+                <Wallet className="w-5 h-5 mr-2" />
+                Apple Wallet
+              </Button>
+            )}
           </div>
 
           {/* Back to Home */}

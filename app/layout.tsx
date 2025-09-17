@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import { siteConfig } from "../lib/site-config"
 import "./globals.css"
 import { LayoutWrapper } from "../components/layout-wrapper"
+import { Analytics } from "@vercel/analytics/next"
 
 // Configure the Inter font (a popular sans-serif font)
 const inter = Inter({
@@ -36,6 +37,7 @@ export default function RootLayout({
         <LayoutWrapper>
           {children}
         </LayoutWrapper>
+        <Analytics />
       </body>
     </html>
   )
