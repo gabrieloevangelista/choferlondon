@@ -126,39 +126,39 @@ export default function Success() {
     const details = `Tour em Londres\n\nDetalhes da reserva:\n- Passageiros: ${passengers}\n- Local de encontro: ${hotel}${flight ? `\n- Voo: ${flight}` : ''}\n\nReserva confirmada via Chofer em Londres\n\nEm caso de dúvidas, entre em contato conosco:\nWhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com`
     
     if (isIOS) {
-      // iOS - Múltiplas tentativas para abrir calendário nativo
-      const tryNativeCalendar = () => {
-        // Método 1: URL scheme do calendário iOS
-        const calendarUrl = `calshow:${Math.floor(startDate.getTime() / 1000)}`
-        
-        // Método 2: Criar evento usando data URL
-        const eventData = {
-          title: tourName,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          location: hotel,
-          notes: details.replace(/\\n/g, '\n')
-        }
-        
-        // Tentar abrir calendário nativo
-        const iframe = document.createElement('iframe')
-        iframe.style.display = 'none'
-        iframe.src = calendarUrl
-        document.body.appendChild(iframe)
-        
-        // Remover iframe após tentativa
-        setTimeout(() => {
-          document.body.removeChild(iframe)
-        }, 1000)
-        
-        // Fallback após 2 segundos se não abrir
-        setTimeout(() => {
-          const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
-          window.open(googleCalendarUrl, '_blank')
-        }, 2000)
-      }
-      
-      tryNativeCalendar()
+       // iOS - Abrir Calendar app nativo conforme solicitado
+       const tryNativeCalendar = () => {
+         // Método 1: URL scheme específico do iOS Calendar
+         const iosCalendarUrl = `calshow:${Math.floor(startDate.getTime() / 1000)}`
+         
+         // Método 2: Criar evento diretamente no Calendar app
+         const eventTitle = encodeURIComponent(tourName)
+         const eventLocation = encodeURIComponent(hotel)
+         const eventNotes = encodeURIComponent(details.replace(/\\n/g, '\n'))
+         
+         // URL para adicionar evento ao Calendar nativo do iOS
+         const addEventUrl = `x-apple-reminderkit://REMCDReminder?title=${eventTitle}&startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&location=${eventLocation}&notes=${eventNotes}`
+         
+         // Tentar abrir Calendar nativo primeiro
+         try {
+           window.location.href = iosCalendarUrl
+         } catch (error) {
+           // Fallback: tentar URL scheme alternativo
+           try {
+             window.location.href = `calshow://`
+           } catch (error2) {
+             // Último fallback: abrir configurações do Calendar
+             window.location.href = 'App-Prefs:root=CALENDAR'
+           }
+         }
+         
+         // Mostrar instruções para o usuário iOS
+         setTimeout(() => {
+           alert('Para adicionar ao Calendar:\n\n1. Abra o app Calendar\n2. Toque em "+" para novo evento\n3. Adicione os detalhes do tour\n\nDetalhes:\n' + details)
+         }, 1500)
+       }
+       
+       tryNativeCalendar()
       
     } else if (isAndroid) {
        // Android - Tentar abrir calendário nativo com múltiplos métodos
@@ -493,7 +493,7 @@ export default function Success() {
     ctx.stroke()
     y += 50
     
-    // Dados do cliente
+    // Dados do cliente com informações dinâmicas
     ctx.fillStyle = '#3b82f6'
     ctx.font = 'bold 22px Arial'
     ctx.fillText('DADOS DO CLIENTE', 80, y)
@@ -501,9 +501,13 @@ export default function Success() {
     
     ctx.fillStyle = '#1f2937'
     ctx.font = '18px Arial'
-    ctx.fillText(`Nome: ${customerName}`, 80, y)
+    ctx.fillText(`Nome: ${customerName || 'Não informado'}`, 80, y)
     y += 30
-    ctx.fillText(`Email: ${customerEmail}`, 80, y)
+    ctx.fillText(`Email: ${customerEmail || 'Não informado'}`, 80, y)
+    y += 30
+    ctx.fillText(`Código da Reserva: CHOFER-${tourName.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}`, 80, y)
+    y += 30
+    ctx.fillText(`Data da Reserva: ${currentDate.toLocaleDateString('pt-BR')}`, 80, y)
     y += 50
     
     // Instruções importantes

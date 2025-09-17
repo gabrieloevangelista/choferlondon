@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import JSZip from 'jszip'
+import crypto from 'crypto'
+
+// Função para gerar manifest.json
+function generateManifest(files: { [key: string]: Buffer | string }) {
+  const manifest: { [key: string]: string } = {}
+  
+  for (const [filename, content] of Object.entries(files)) {
+    const hash = crypto.createHash('sha1')
+    hash.update(content)
+    manifest[filename] = hash.digest('hex')
+  }
+  
+  return JSON.stringify(manifest)
+}
+
+// Função para gerar assinatura PKCS#7 (simulada para desenvolvimento)
+function generateSignature(manifest: string): Buffer {
+  // Em produção, isso seria uma assinatura real com certificado Apple
+  // Por enquanto, retornamos um placeholder
+  const signature = crypto.createHash('sha256').update(manifest).digest()
+  return signature
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +41,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Criar estrutura completa do Apple Wallet Pass
+    // Criar estrutura completa do Apple Wallet Pass conforme documentação
     const passJson = {
       formatVersion: 1,
       passTypeIdentifier: 'pass.com.choferemlondres.eventticket',
@@ -33,7 +56,7 @@ export async function GET(request: NextRequest) {
       backgroundColor: 'rgb(59, 130, 246)',
       labelColor: 'rgb(255, 255, 255)',
       
-      // Event Ticket Structure conforme Apple Wallet
+      // Event Ticket Structure conforme Apple Passes Documentation
       eventTicket: {
         primaryFields: [{
           key: 'event',
@@ -119,6 +142,19 @@ export async function GET(request: NextRequest) {
         ]
       },
       
+      // Semantic Tags conforme Apple Passes Documentation
+      semantics: {
+        eventName: passData.tourName,
+        venueName: passData.hotel || 'Londres',
+        eventStartDate: passData.tourDate,
+        eventEndDate: new Date(new Date(passData.tourDate).getTime() + 4 * 60 * 60 * 1000).toISOString(),
+        performerNames: ['Chofer em Londres'],
+        genre: 'Tour Turístico',
+        leagueAbbreviation: 'CHOFER',
+        homeTeamAbbreviation: 'LONDON',
+        awayTeamAbbreviation: 'TOUR'
+      },
+      
       // Localização para relevância geográfica
       locations: [{
         latitude: 51.5074,
@@ -150,11 +186,29 @@ export async function GET(request: NextRequest) {
       sharingProhibited: false
     }
 
-    // Gerar pass.json conforme especificações Apple
-    const passContent = JSON.stringify(passJson, null, 2)
+    // Criar arquivo .pkpass conforme Apple Passes Documentation
+    const zip = new JSZip()
     
-    // Retornar como .pkpass válido (em produção seria um ZIP assinado)
-    return new NextResponse(passContent, {
+    // 1. Adicionar pass.json
+    const passContent = JSON.stringify(passJson, null, 2)
+    zip.file('pass.json', passContent)
+    
+    // 2. Gerar manifest.json
+    const files = {
+      'pass.json': passContent
+    }
+    const manifest = generateManifest(files)
+    zip.file('manifest.json', manifest)
+    
+    // 3. Gerar assinatura (simulada para desenvolvimento)
+    const signature = generateSignature(manifest)
+    zip.file('signature', signature)
+    
+    // 4. Gerar arquivo .pkpass
+    const pkpassBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+    
+    // Retornar como .pkpass válido
+    return new NextResponse(pkpassBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.apple.pkpass',
