@@ -110,32 +110,94 @@ export default function Success() {
 
     const { tourName, tourDate, hotel, passengers, flight } = bookingDetails.metadata
     
-    // Detectar se é desktop
-    const isDesktop = window.innerWidth >= 768
+    // Detectar sistema operacional e dispositivo
+    const userAgent = navigator.userAgent
+    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream
+    const isAndroid = /Android/.test(userAgent)
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
     
-    if (isDesktop) {
-      // No desktop, abrir Google Calendar diretamente
-      const startDate = new Date(tourDate)
-      const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // 4 horas
-      
-      const formatDate = (date: Date) => {
-        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    const startDate = new Date(tourDate)
+    const endDate = new Date(startDate.getTime() + 4 * 60 * 60 * 1000) // 4 horas
+    
+    const formatDate = (date: Date) => {
+      return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+    }
+    
+    const details = `Tour em Londres\n\nDetalhes da reserva:\n- Passageiros: ${passengers}\n- Local de encontro: ${hotel}${flight ? `\n- Voo: ${flight}` : ''}\n\nReserva confirmada via Chofer em Londres\n\nEm caso de dúvidas, entre em contato conosco:\nWhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com`
+    
+    if (isIOS) {
+      // iOS - Múltiplas tentativas para abrir calendário nativo
+      const tryNativeCalendar = () => {
+        // Método 1: URL scheme do calendário iOS
+        const calendarUrl = `calshow:${Math.floor(startDate.getTime() / 1000)}`
+        
+        // Método 2: Criar evento usando data URL
+        const eventData = {
+          title: tourName,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          location: hotel,
+          notes: details.replace(/\\n/g, '\n')
+        }
+        
+        // Tentar abrir calendário nativo
+        const iframe = document.createElement('iframe')
+        iframe.style.display = 'none'
+        iframe.src = calendarUrl
+        document.body.appendChild(iframe)
+        
+        // Remover iframe após tentativa
+        setTimeout(() => {
+          document.body.removeChild(iframe)
+        }, 1000)
+        
+        // Fallback após 2 segundos se não abrir
+        setTimeout(() => {
+          const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+          window.open(googleCalendarUrl, '_blank')
+        }, 2000)
       }
       
-      const details = `Tour em Londres\n\nDetalhes da reserva:\n- Passageiros: ${passengers}\n- Local de encontro: ${hotel}${flight ? `\n- Voo: ${flight}` : ''}\n\nReserva confirmada via Chofer em Londres\n\nEm caso de dúvidas, entre em contato conosco:\nWhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com`
+      tryNativeCalendar()
       
-      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+    } else if (isAndroid) {
+       // Android - Tentar abrir calendário nativo com múltiplos métodos
+       const tryAndroidCalendar = () => {
+         // Método 1: Intent específico para adicionar evento
+         const intentUrl = `intent://calendar/events?` +
+           `title=${encodeURIComponent(tourName)}&` +
+           `beginTime=${startDate.getTime()}&` +
+           `endTime=${endDate.getTime()}&` +
+           `description=${encodeURIComponent(details)}&` +
+           `eventLocation=${encodeURIComponent(hotel)}` +
+           `#Intent;scheme=content;package=com.google.android.calendar;end`
+         
+         // Tentar abrir com intent
+         const iframe = document.createElement('iframe')
+         iframe.style.display = 'none'
+         iframe.src = intentUrl
+         document.body.appendChild(iframe)
+         
+         // Remover iframe após tentativa
+         setTimeout(() => {
+           if (document.body.contains(iframe)) {
+             document.body.removeChild(iframe)
+           }
+         }, 1000)
+         
+         // Fallback para Google Calendar web após 2 segundos
+         setTimeout(() => {
+           const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+           window.open(googleCalendarUrl, '_blank')
+         }, 2000)
+       }
+       
+       tryAndroidCalendar()
       
-      window.open(googleCalendarUrl, '_blank')
     } else {
-      // No mobile, usar a função inteligente
-      addTourToCalendar({
-        tourName,
-        tourDate,
-        hotel,
-        passengers,
-        flight
-      })
+      // Desktop ou outros dispositivos - Google Calendar web
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(tourName)}&dates=${formatDate(startDate)}/${formatDate(endDate)}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(hotel)}`
+      window.open(googleCalendarUrl, '_blank')
     }
   }
 
@@ -216,17 +278,20 @@ export default function Success() {
         relevantDate: tourDateTime.toISOString()
       }
 
-      // Criar URL para adicionar ao Apple Wallet
-        const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
-        
-        // Abrir diretamente o arquivo .pkpass
-        // O iOS Safari reconhecerá automaticamente e oferecerá para adicionar ao Wallet
-        const link = document.createElement('a')
-        link.href = passUrl
-        link.download = `tour-${Date.now()}.pkpass`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
+      // Redirecionar para página de wallet pass
+          const passId = `tour-${Date.now()}`
+          const walletUrl = `/wallet-pass/${passId}?` + new URLSearchParams({
+            tour: tourName,
+            date: tourDate,
+            customer: customerName,
+            email: customerEmail,
+            passengers: passengers,
+            hotel: hotel,
+            ...(flight && { flight })
+          }).toString()
+          
+          // Abrir em nova aba para simular experiência do Wallet
+          window.open(walletUrl, '_blank')
       
     } catch (error) {
       console.error('Erro ao gerar Apple Wallet Pass:', error)
@@ -262,19 +327,63 @@ export default function Success() {
     ctx.fillRect(0, 0, canvas.width, 150)
     
     // Função para finalizar e baixar o ticket
-    const finalizarTicket = () => {
-      canvas.toBlob((blob) => {
+    const finalizarTicket = async () => {
+      // Converter para JPG com qualidade alta
+      canvas.toBlob(async (blob) => {
         if (blob) {
+          const fileName = `Ticket-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.jpg`
+          
+          // Detectar se é dispositivo móvel
+          const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+          
+          if (isMobile && navigator.share && navigator.canShare) {
+            try {
+              // Criar arquivo para compartilhar
+              const file = new File([blob], fileName, { type: 'image/jpeg' })
+              
+              // Verificar se pode compartilhar arquivos
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  title: 'Comprovante do Tour',
+                  text: `Comprovante: ${tourName}`,
+                  files: [file]
+                })
+                return
+              }
+            } catch (error) {
+              console.log('Web Share não disponível, usando download tradicional')
+            }
+          }
+          
+          // Fallback: download tradicional
           const url = URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
-          link.download = `Ticket-${tourName.replace(/[^a-zA-Z0-9]/g, '-')}-${reservationDate.toISOString().split('T')[0]}.png`
+          link.download = fileName
+          
+          // Para dispositivos móveis, abrir em nova aba para facilitar salvamento
+          if (isMobile) {
+            link.setAttribute('target', '_blank')
+            link.setAttribute('rel', 'noopener noreferrer')
+          }
+          
           document.body.appendChild(link)
           link.click()
           document.body.removeChild(link)
           URL.revokeObjectURL(url)
+          
+          // Mostrar instruções específicas por dispositivo
+          if (isMobile) {
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+              alert('Para salvar na galeria:\n\n1. Toque e segure na imagem\n2. Selecione "Salvar na Galeria"\n3. A imagem será salva em suas fotos')
+            } else {
+              alert('Comprovante baixado! Verifique sua pasta de Downloads ou Galeria.')
+            }
+          } else {
+            alert('Comprovante salvo em Downloads!')
+          }
         }
-      }, 'image/png')
+      }, 'image/jpeg', 0.95) // JPG com 95% de qualidade
     }
     
     // Carregar e desenhar logo real

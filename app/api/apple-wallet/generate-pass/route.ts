@@ -11,6 +11,11 @@ export async function GET(request: NextRequest) {
 
     const passData = JSON.parse(decodeURIComponent(passDataParam))
     
+    // Validar dados obrigatórios
+    if (!passData.eventTicket || !passData.serialNumber) {
+      return NextResponse.json({ error: 'Dados do pass incompletos' }, { status: 400 })
+    }
+
     // Criar estrutura completa do pass conforme Apple Wallet
     const passJson = {
       formatVersion: 1,
@@ -18,34 +23,39 @@ export async function GET(request: NextRequest) {
       serialNumber: passData.serialNumber,
       teamIdentifier: 'CHOFER_TEAM_ID',
       organizationName: 'Chofer em Londres',
-      description: passData.description,
+      description: passData.description || 'Tour em Londres',
       logoText: 'Chofer em Londres',
-      foregroundColor: 'rgb(255, 255, 255)',
-      backgroundColor: 'rgb(59, 130, 246)',
-      labelColor: 'rgb(255, 255, 255)',
+      // Cores em formato hexadecimal (mais compatível)
+      foregroundColor: '#FFFFFF',
+      backgroundColor: '#3B82F6',
+      labelColor: '#FFFFFF',
       eventTicket: {
-        primaryFields: passData.eventTicket?.primaryFields || [],
-        secondaryFields: passData.eventTicket?.secondaryFields || [],
-        auxiliaryFields: passData.eventTicket?.auxiliaryFields || [],
-        backFields: passData.eventTicket?.backFields || []
+        primaryFields: passData.eventTicket.primaryFields || [{
+          key: 'event',
+          label: 'TOUR',
+          value: passData.description || 'Tour em Londres'
+        }],
+        secondaryFields: passData.eventTicket.secondaryFields || [],
+        auxiliaryFields: passData.eventTicket.auxiliaryFields || [],
+        backFields: passData.eventTicket.backFields || []
       },
-      locations: passData.locations || [],
-      barcodes: passData.barcodes || [],
-      relevantDate: passData.relevantDate,
-      // Adicionar campos obrigatórios
-      webServiceURL: `${process.env.NEXT_PUBLIC_APP_URL || 'https://choferemlondres.com'}/api/apple-wallet`,
-      authenticationToken: `auth-${passData.serialNumber}`
+      // Remover campos opcionais que podem causar problemas
+      ...(passData.locations && passData.locations.length > 0 && { locations: passData.locations }),
+      ...(passData.barcodes && passData.barcodes.length > 0 && { barcodes: passData.barcodes }),
+      ...(passData.relevantDate && { relevantDate: passData.relevantDate })
     }
 
-    // Gerar arquivo pass.json válido
+    // Para desenvolvimento, criar um pass básico sem assinatura
+    // Em produção, seria necessário assinar com certificado Apple
     const passContent = JSON.stringify(passJson, null, 2)
     
-    // Retornar como arquivo .pkpass com content-type correto
+    // Retornar como JSON temporariamente para debug
+    // O iOS pode aceitar JSON para teste em desenvolvimento
     return new NextResponse(passContent, {
       status: 200,
       headers: {
-        'Content-Type': 'application/vnd.apple.pkpass',
-        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.pkpass"`,
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="tour-${passData.serialNumber}.json"`,
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
