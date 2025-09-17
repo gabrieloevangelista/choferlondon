@@ -208,96 +208,73 @@ export default function Success() {
     const tourDateTime = new Date(tourDate)
 
     try {
-      // Criar dados do pass para Apple Wallet
+      // Criar dados do pass conforme Apple Wallet Guidelines
       const passData = {
-        formatVersion: 1,
-        passTypeIdentifier: 'pass.com.choferemlondres.tour',
-        serialNumber: `tour-${Date.now()}`,
-        teamIdentifier: 'CHOFER_TEAM_ID',
-        organizationName: 'Chofer em Londres',
-        description: `Tour: ${tourName}`,
-        logoText: 'Chofer em Londres',
-        foregroundColor: 'rgb(255, 255, 255)',
-        backgroundColor: 'rgb(59, 130, 246)',
-        eventTicket: {
-          primaryFields: [{
-            key: 'event',
-            label: 'TOUR',
-            value: tourName
-          }],
-          secondaryFields: [{
-            key: 'date',
-            label: 'DATA',
-            value: tourDateTime.toLocaleDateString('pt-BR')
-          }, {
-            key: 'time',
-            label: 'HORÁRIO',
-            value: tourDateTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-          }],
-          auxiliaryFields: [{
-            key: 'passengers',
-            label: 'PASSAGEIROS',
-            value: passengers
-          }, {
-            key: 'location',
-            label: 'LOCAL',
-            value: hotel
-          }],
-          backFields: [{
-            key: 'customer',
-            label: 'Cliente',
-            value: customerName
-          }, {
-            key: 'email',
-            label: 'Email',
-            value: customerEmail
-          }, {
-            key: 'flight',
-            label: 'Voo',
-            value: flight || 'Não informado'
-          }, {
-            key: 'instructions',
-            label: 'Instruções',
-            value: 'Chegue 15 minutos antes do horário. Em caso de dúvidas, entre em contato: +44 20 1234 5678'
-          }, {
-            key: 'contact',
-            label: 'Contato',
-            value: 'WhatsApp: +44 20 1234 5678\nEmail: info@choferemlondres.com\nWebsite: www.choferemlondres.com'
-          }]
-        },
-        locations: [{
-          latitude: 51.5074,
-          longitude: -0.1278,
-          relevantText: `Seu tour ${tourName} está próximo!`
-        }],
-        barcodes: [{
-          message: `TOUR-${Date.now()}`,
-          format: 'PKBarcodeFormatQR',
-          messageEncoding: 'iso-8859-1'
-        }],
-        relevantDate: tourDateTime.toISOString()
+        tourName: tourName,
+        tourDate: tourDateTime.toISOString(),
+        customerName: customerName,
+        customerEmail: customerEmail,
+        passengers: passengers,
+        hotel: hotel,
+        flight: flight,
+        serialNumber: `CHOFER-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
       }
 
-      // Redirecionar para página de wallet pass
-          const passId = `tour-${Date.now()}`
-          const walletUrl = `/wallet-pass/${passId}?` + new URLSearchParams({
-            tour: tourName,
-            date: tourDate,
-            customer: customerName,
-            email: customerEmail,
-            passengers: passengers,
-            hotel: hotel,
-            ...(flight && { flight })
-          }).toString()
-          
-          // Abrir em nova aba para simular experiência do Wallet
-          window.open(walletUrl, '_blank')
+      // Detectar se é dispositivo iOS
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
       
-    } catch (error) {
-      console.error('Erro ao gerar Apple Wallet Pass:', error)
-      alert('Erro ao gerar passe para Apple Wallet. Tente novamente.')
-    }
-  }
+      if (isIOS) {
+        // iOS - Tentar gerar Apple Wallet Pass real
+        try {
+          const passUrl = `/api/apple-wallet/generate-pass?data=${encodeURIComponent(JSON.stringify(passData))}`
+          
+          // Criar link temporário para download
+          const link = document.createElement('a')
+          link.href = passUrl
+          link.download = `chofer-tour-${passData.serialNumber}.pkpass`
+          link.style.display = 'none'
+          
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          
+          // Mostrar instruções para iOS
+          setTimeout(() => {
+            alert('Pass baixado! Para adicionar ao Apple Wallet:\n\n1. Abra o arquivo baixado\n2. Toque em "Adicionar" no canto superior direito\n3. O passe será adicionado à sua Wallet')
+          }, 1000)
+          
+        } catch (error) {
+          console.error('Erro ao gerar pass nativo:', error)
+          // Fallback para página web
+          openWebWalletPass(passData)
+        }
+      } else {
+        // Outros dispositivos - Abrir página web simulando Wallet
+        openWebWalletPass(passData)
+      }
+       
+     } catch (error) {
+       console.error('Erro ao processar Apple Wallet Pass:', error)
+       alert('Erro ao gerar passe para Apple Wallet. Tente novamente.')
+     }
+   }
+   
+   // Função auxiliar para abrir página web do wallet
+   const openWebWalletPass = (passData: any) => {
+     const passId = passData.serialNumber
+     const walletUrl = `/wallet-pass/${passId}?` + new URLSearchParams({
+       tour: passData.tourName,
+       date: passData.tourDate,
+       customer: passData.customerName,
+       email: passData.customerEmail,
+       passengers: passData.passengers,
+       hotel: passData.hotel,
+       ...(passData.flight && { flight: passData.flight })
+     }).toString()
+     
+     // Abrir em nova aba
+     window.open(walletUrl, '_blank')
+   }
 
   const downloadReceipt = async () => {
     if (!bookingDetails) return
